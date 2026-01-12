@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8" />
+<title>Studentský chat</title>
+ 
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --border: #1f2933;
+    }
+ 
+    * {
+      box-sizing: border-box;
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
+ 
+    body {
+      background: linear-gradient(135deg, #020617, #0f172a);
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+    }
+ 
+    .container {
+      width: 100%;
+      max-width: 520px;
+      background: var(--card);
+      padding: 30px;
+      border-radius: 14px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+    }
+ 
+    h1 {
+      text-align: center;
+      margin-bottom: 25px;
+      font-size: 1.6rem;
+      letter-spacing: 0.5px;
+    }
+ 
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+ 
+    label {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+ 
+    textarea,
+    input {
+      background: #020617;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.95rem;
+      color: var(--text);
+      transition: border 0.2s, box-shadow 0.2s;
+    }
+ 
+    textarea::placeholder,
+    input::placeholder {
+      color: #6b7280;
+    }
+ 
+    textarea:focus,
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+ 
+    textarea {
+      resize: vertical;
+      min-height: 110px;
+    }
+ 
+    button {
+      margin-top: 10px;
+      padding: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+      color: #020617;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    }
+ 
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(56, 189, 248, 0.35);
+    }
+ 
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+ 
+    .answer {
+      margin-top: 22px;
+      padding: 16px;
+      background: #020617;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      white-space: pre-wrap;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+</style>
+</head>
+<body>
+ 
+  <div class="container">
+<h1>Dotaz na server</h1>
+ 
+    <form id="question-form">
+<label for="question">Dotaz</label>
+<textarea
+        id="question"
+        rows="5"
+        placeholder="Napiš svůj dotaz..."
+></textarea>
+ 
+      <label for="email">E-mail (nepovinný)</label>
+<input
+        type="email"
+        id="email"
+        placeholder="napr. student@email.cz"
+      />
+ 
+      <button type="submit">Odeslat</button>
+</form>
+ 
+    <div id="answer" class="answer"></div>
+</div>
+ 
+  <!-- ⚠️ JS ZŮSTÁVÁ BEZE ZMĚNY -->
+<script>
+    const USE_BACKEND = false;
+    const BACKEND_URL = "https://lkostak.onrender.com/chat";
+    const STUDENT_ID = "Kostak_Ladislav_4A";
+ 
+    const form = document.getElementById("question-form");
+    const textarea = document.getElementById("question");
+    const emailInput = document.getElementById("email");
+    const answerDiv = document.getElementById("answer");
+ 
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+ 
+      const text = textarea.value.trim();
+      const email = emailInput.value.trim();
+ 
+      if (!text) {
+        answerDiv.textContent = "Nejdřív napiš dotaz.";
+        return;
+      }
+ 
+      answerDiv.textContent = "Zpracovávám dotaz…";
+      form.querySelector("button").disabled = true;
+ 
+      try {
+        const payload = {
+          message: text,
+          student: STUDENT_ID,
+          email: email || null
+        };
+ 
+        if (!USE_BACKEND) {
+          answerDiv.textContent =
+            `Demo odpověď (bez serveru)\n\n` +
+            `Student: ${payload.student}\n` +
+            `Dotaz: ${payload.message}`;
+          return;
+        }
+ 
+        const res = await fetch(BACKEND_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+ 
+        if (!res.ok) {
+          answerDiv.textContent = "Server vrátil chybu: " + res.status;
+          return;
+        }
+ 
+        const data = await res.json();
+ 
+        if (data.reply) {
+          answerDiv.textContent = data.reply;
+        } else if (data.error) {
+          answerDiv.textContent = "Chyba serveru: " + data.error;
+        } else {
+          answerDiv.textContent = "Server nevrátil žádnou odpověď.";
+        }
+      } catch (err) {
+        console.error(err);
+        answerDiv.textContent = "Nepodařilo se spojit se serverem.";
+      } finally {
+        form.querySelector("button").disabled = false;
+        textarea.value = "";
+      }
+    });
+</script>
+ 
+</body>
+</html>
